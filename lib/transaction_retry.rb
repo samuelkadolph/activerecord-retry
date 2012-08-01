@@ -7,10 +7,12 @@ module TransactionRetry
 
   extend ActiveSupport::Concern
 
-  TRANSACTION_RETRY_DEFAULT_RETRIES = [1, 2, 4, 8]
-  TRANSACTION_RETRY_ERRORS = [
-    /Lost connection to MySQL server during query/
-  ]
+  TRANSACTION_RETRY_DEFAULT_RETRIES = [2, 4, 8]
+  TRANSACTION_RETRY_ERRORS = {
+    /MySQL server has gone away/ => :reconnect,
+    /Lost connection to MySQL server during query/ => :reconnect,
+    /Query execution was interrupted/ => :retry
+  }
 
   included do
     mattr_accessor :transaction_retries
@@ -30,15 +32,23 @@ module TransactionRetry
       begin
         transaction_without_retry(*args, &block)
       rescue ActiveRecord::StatementInvalid => error
-        raise if TRANSACTION_RETRY_ERRORS.none? { |regex| regex =~ error.message }
+        found, action = TRANSACTION_RETRY_ERRORS.detect { |regex, action| regex =~ error.message }
+        raise unless found
         raise if connection.open_transactions != 0
         raise if tries >= transaction_retries.count
 
-        delay = transaction_retry_delays[tries] || 2
+        delay = transaction_retries[tries]
         tries += 1
-        logger.warn("Transaction failed to commit: '#{error.message}'. Retrying for the #{tries.ordinalize} time after #{delay}s.") if logger
+        logger.warn("Transaction failed to commit: '#{error.message}'. #{action.to_s.capitalize}ing for the #{tries.ordinalize} time after #{delay}s.") if logger
         sleep(delay)
-        retry
+
+        case action
+        when :reconnect
+          clear_active_connections!
+          retry
+        when :retry
+          retry
+        end
       end
     end
   end
