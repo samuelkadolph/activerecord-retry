@@ -18,6 +18,9 @@ class Mock
     def clear_active_connections!
     end
 
+    def establish_connection
+    end
+
     def logger
     end
 
@@ -43,7 +46,7 @@ describe TransactionRetry do
     -> do
       Mock.transaction do
         runs += 1
-        raise ActiveRecord::StatementInvalid, "Lost connection to MySQL server during query"
+        raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
 
@@ -58,7 +61,7 @@ describe TransactionRetry do
         outer_runs += 1
         Mock.transaction do
           inner_runs += 1
-          raise ActiveRecord::StatementInvalid, "Lost connection to MySQL server during query"
+          raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
         end
       end
     end.must_raise(ActiveRecord::StatementInvalid)
@@ -67,14 +70,14 @@ describe TransactionRetry do
   end
 
   it "logs a warning when a transaction is being retried" do
-    Mock.stubs(:logger).returns(logger = mock())
-    Mock.transaction_retries = [2]
-
+    logger = mock()
     logger.expects(:warn)
+    Mock.stubs(:logger).returns(logger)
+    Mock.transaction_retries = [2]
 
     -> do
       Mock.transaction do
-        raise ActiveRecord::StatementInvalid, "Lost connection to MySQL server during query"
+        raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
   end
@@ -84,6 +87,18 @@ describe TransactionRetry do
     Mock.expects(:sleep).with(4)
     Mock.expects(:sleep).with(8)
     Mock.transaction_retries = [2, 4, 8]
+
+    -> do
+      Mock.transaction do
+        raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
+      end
+    end.must_raise(ActiveRecord::StatementInvalid)
+  end
+
+  it "clears active connections when action is reconnect" do
+    Mock.expects(:clear_active_connections!)
+    Mock.expects(:establish_connection)
+    Mock.transaction_retries = [2]
 
     -> do
       Mock.transaction do

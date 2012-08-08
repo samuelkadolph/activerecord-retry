@@ -9,9 +9,10 @@ module TransactionRetry
 
   TRANSACTION_RETRY_DEFAULT_RETRIES = [2, 4, 8]
   TRANSACTION_RETRY_ERRORS = {
-    /MySQL server has gone away/ => :reconnect,
     /Lost connection to MySQL server during query/ => :reconnect,
-    /Query execution was interrupted/ => :retry
+    /MySQL server has gone away/ => :reconnect,
+    /Query execution was interrupted/ => :retry,
+    /The MySQL server is running with the --read-only option so it cannot execute this statement/ => :reconnect
   }
 
   included do
@@ -39,12 +40,13 @@ module TransactionRetry
 
         delay = transaction_retries[tries]
         tries += 1
-        logger.warn("Transaction failed to commit: '#{error.message}'. #{action.to_s.capitalize}ing for the #{tries.ordinalize} time after #{delay}s.") if logger
+        logger.warn("Transaction failed to commit: '#{error.message}'. #{action.to_s.capitalize}ing for the #{tries.ordinalize} time after sleeping for #{delay}s.") if logger
         sleep(delay)
 
         case action
         when :reconnect
           clear_active_connections!
+          establish_connection
           retry
         when :retry
           retry

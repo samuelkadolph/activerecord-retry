@@ -10,7 +10,7 @@ Retries transactions when an `ActiveRecord::StatementInvalid` occurs that matche
 
 If you're using rails, add this line your application's Gemfile:
 
-    gem "transaction-retry", require: "transaction_retry/railtie"
+    gem "transaction-retry", require: "transaction_retry/rails"
 
 Otherwise add this line to your application's Gemfile:
 
