@@ -1,52 +1,43 @@
 require "test_helper"
 require "transaction_retry"
 
-class Mock
-  class Connection
-    attr_accessor :open_transactions
-    def initialize
-      self.open_transactions = 0
+describe TransactionRetry do
+  before do
+    @connection = mock()
+    @connection.singleton_class.class_exec do
+      attr_accessor :open_transactions
     end
-  end
-
-  class << self
-    def connection
-      return @connection if defined?(@connection)
-      @connection = Connection.new
-    end
-
-    def clear_active_connections!
-    end
-
-    def establish_connection
-    end
-
-    def logger
-    end
-
-    def sleep(n)
-    end
-
-    def transaction
+    @connection.open_transactions = 0
+    @logger = mock()
+    @logger.stubs(:warn)
+    @mock = Class.new
+    @mock.stubs(:connection).returns(@connection)
+    @mock.stubs(:clear_active_connections!)
+    @mock.stubs(:establish_connection)
+    @mock.stubs(:logger).returns(@logger)
+    @mock.stubs(:sleep)
+    def @mock.transaction
       connection.open_transactions += 1
       yield
     ensure
       connection.open_transactions -= 1
     end
+    @mock.send(:include, TransactionRetry)
+    @mock.transaction_errors = {
+      /sleep then retry/ => [:sleep, :retry],
+      /reconnect then retry/ => [:reconnect, :retry],
+      /retry/ => :retry
+    }
   end
 
-  include TransactionRetry
-end
-
-describe TransactionRetry do
   it "should not retry more than retries count" do
-    retries = Mock.transaction_retries = [2, 4, 8, 16]
+    retries = @mock.transaction_retries = [2, 4, 8, 16]
     runs = 0
 
     -> do
-      Mock.transaction do
+      @mock.transaction do
         runs += 1
-        raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
+        raise ActiveRecord::StatementInvalid, "retry"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
 
@@ -57,11 +48,11 @@ describe TransactionRetry do
     inner_runs = outer_runs = 0
 
     -> do
-      Mock.transaction do
+      @mock.transaction do
         outer_runs += 1
-        Mock.transaction do
+        @mock.transaction do
           inner_runs += 1
-          raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
+          raise ActiveRecord::StatementInvalid, "retry"
         end
       end
     end.must_raise(ActiveRecord::StatementInvalid)
@@ -70,39 +61,37 @@ describe TransactionRetry do
   end
 
   it "logs a warning when a transaction is being retried" do
-    logger = mock()
-    logger.expects(:warn)
-    Mock.stubs(:logger).returns(logger)
-    Mock.transaction_retries = [2]
+    @logger.expects(:warn)
+    @mock.transaction_retries = [2]
 
     -> do
-      Mock.transaction do
-        raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
+      @mock.transaction do
+        raise ActiveRecord::StatementInvalid, "retry"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
   end
 
   it "sleeps for the proper times" do
-    Mock.expects(:sleep).with(2)
-    Mock.expects(:sleep).with(4)
-    Mock.expects(:sleep).with(8)
-    Mock.transaction_retries = [2, 4, 8]
+    @mock.expects(:sleep).with(2)
+    @mock.expects(:sleep).with(4)
+    @mock.expects(:sleep).with(8)
+    @mock.transaction_retries = [2, 4, 8]
 
     -> do
-      Mock.transaction do
-        raise ActiveRecord::StatementInvalid, "Query execution was interrupted"
+      @mock.transaction do
+        raise ActiveRecord::StatementInvalid, "sleep then retry"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
   end
 
   it "clears active connections when action is reconnect" do
-    Mock.expects(:clear_active_connections!)
-    Mock.expects(:establish_connection)
-    Mock.transaction_retries = [2]
+    @mock.expects(:clear_active_connections!)
+    @mock.expects(:establish_connection)
+    @mock.transaction_retries = [2]
 
     -> do
-      Mock.transaction do
-        raise ActiveRecord::StatementInvalid, "Lost connection to MySQL server during query"
+      @mock.transaction do
+        raise ActiveRecord::StatementInvalid, "reconnect then retry"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
   end
