@@ -1,6 +1,7 @@
 require "active_record/errors"
 require "active_support/concern"
 require "active_support/core_ext/integer/inflections"
+require "active_support/core_ext/module/attribute_accessors"
 
 module TransactionRetry
   require "transaction_retry/version"
@@ -9,8 +10,8 @@ module TransactionRetry
 
   TRANSACTION_RETRY_DEFAULT_RETRIES = [1, 2, 4].freeze
   TRANSACTION_RETRY_ERRORS = {
-    /Deadlock found when trying to get lock/ => [:retry],
-    /Lock wait timeout exceeded/ => [:retry],
+    /Deadlock found when trying to get lock/ => :retry,
+    /Lock wait timeout exceeded/ => :retry,
     /Lost connection to MySQL server during query/ => [:sleep, :reconnect, :retry],
     /MySQL server has gone away/ => [:sleep, :reconnect, :retry],
     /Query execution was interrupted/ => :retry,
@@ -57,7 +58,7 @@ module TransactionRetry
               "retrying"
             end
           end.join(", ").capitalize
-          message << " for the #{tries.ordinalize} time"
+          message << " for the #{tries.ordinalize} time."
           logger.warn(message)
         end
 

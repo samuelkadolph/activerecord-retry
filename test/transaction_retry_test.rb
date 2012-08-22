@@ -8,8 +8,8 @@ describe TransactionRetry do
       attr_accessor :open_transactions
     end
     @connection.open_transactions = 0
-    @logger = mock()
-    @logger.stubs(:warn)
+    @buffer = StringIO.new
+    @logger = Logger.new(@buffer)
     @mock = Class.new
     @mock.stubs(:connection).returns(@connection)
     @mock.stubs(:clear_active_connections!)
@@ -24,6 +24,7 @@ describe TransactionRetry do
     end
     @mock.send(:include, TransactionRetry)
     @mock.transaction_errors = {
+      /sleep reconnect then retry/ => [:sleep, :reconnect, :retry],
       /sleep then retry/ => [:sleep, :retry],
       /reconnect then retry/ => [:reconnect, :retry],
       /retry/ => :retry
@@ -60,15 +61,20 @@ describe TransactionRetry do
     inner_runs.must_equal(outer_runs)
   end
 
-  it "logs a warning when a transaction is being retried" do
-    @logger.expects(:warn)
+  it "logs a warning when a transaction is being retried that describes what it is doing" do
     @mock.transaction_retries = [2]
 
     -> do
       @mock.transaction do
-        raise ActiveRecord::StatementInvalid, "retry"
+        raise ActiveRecord::StatementInvalid, "sleep reconnect then retry"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
+
+    warning = @buffer.string
+    warning.wont_be_empty
+    /sleeping for 2s/i.must_match(warning)
+    /reconnecting/i.must_match(warning)
+    /retrying/i.must_match(warning)
   end
 
   it "sleeps for the proper times" do
