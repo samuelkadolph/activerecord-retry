@@ -15,7 +15,7 @@ module TransactionRetry
     /Lost connection to MySQL server during query/ => [:sleep, :reconnect, :retry],
     /MySQL server has gone away/ => [:sleep, :reconnect, :retry],
     /Query execution was interrupted/ => :retry,
-    /The MySQL server is running with the --read-only option so it cannot execute this statement/ => [:reconnect, :retry]
+    /The MySQL server is running with the --read-only option so it cannot execute this statement/ => [:sleep, :reconnect, :retry]
   }.freeze
 
   included do
@@ -37,17 +37,18 @@ module TransactionRetry
       begin
         transaction_without_retry(*args, &block)
       rescue ActiveRecord::StatementInvalid => error
-        found, actions = transaction_errors.detect { |regex, action| regex =~ error.message }
-        raise unless found
         raise if connection.open_transactions != 0
         raise if tries >= transaction_retries.count
+
+        found, actions = transaction_errors.detect { |regex, action| regex =~ error.message }
+        raise unless found
 
         actions = Array(actions)
         delay = transaction_retries[tries]
         tries += 1
 
         if logger
-          message = "Transaction failed to commit: '#{error.message}'. "
+          message = "Transaction failed to commit: '#{error}'. "
           message << actions.map do |action|
             case action
             when :sleep

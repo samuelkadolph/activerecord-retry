@@ -24,11 +24,27 @@ describe TransactionRetry do
     end
     @mock.send(:include, TransactionRetry)
     @mock.transaction_errors = {
-      /sleep reconnect then retry/ => [:sleep, :reconnect, :retry],
+      /sleep then reconnect then retry/ => [:sleep, :reconnect, :retry],
       /sleep then retry/ => [:sleep, :retry],
       /reconnect then retry/ => [:reconnect, :retry],
       /retry/ => :retry
     }
+  end
+
+  it "should work with no errors" do
+    @mock.transaction { :success }.must_equal(:success)
+  end
+
+  it "should work with less or equal errors than retries" do
+    errors = ["sleep then retry", "retry"]
+    @mock.transaction_retries = [0] * errors.size
+    @mock.transaction { errors.any? ? raise(ActiveRecord::StatementInvalid, errors.shift) : :success }.must_equal(:success)
+  end
+
+  it "should not work with more errors than retries" do
+    errors = ["sleep then retry", "retry", "retry"]
+    @mock.transaction_retries = [0] * (errors.size - 1)
+    -> { @mock.transaction { errors.any? ? raise(ActiveRecord::StatementInvalid, errors.shift) : :success } }.must_raise(ActiveRecord::StatementInvalid)
   end
 
   it "should not retry more than retries count" do
@@ -66,7 +82,7 @@ describe TransactionRetry do
 
     -> do
       @mock.transaction do
-        raise ActiveRecord::StatementInvalid, "sleep reconnect then retry"
+        raise ActiveRecord::StatementInvalid, "sleep then reconnect then retry"
       end
     end.must_raise(ActiveRecord::StatementInvalid)
 
