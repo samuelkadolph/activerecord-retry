@@ -1,14 +1,14 @@
 require File.expand_path("../.gemspec", __FILE__)
-require File.expand_path("../lib/transaction_retry/version", __FILE__)
+require File.expand_path("../lib/active_record/retry/version", __FILE__)
 
 Gem::Specification.new do |gem|
-  gem.name        = "transaction-retry"
+  gem.name        = "activerecord-retry"
   gem.authors     = ["Samuel Kadolph"]
   gem.email       = ["samuel@kadolph.com"]
   gem.description = readme.description
   gem.summary     = readme.summary
-  gem.homepage    = "http://samuelkadolph.github.com/transaction-retry/"
-  gem.version     = TransactionRetry::VERSION
+  gem.homepage    = "http://samuelkadolph.github.com/activerecord-retry/"
+  gem.version     = ActiveRecord::Retry::VERSION
 
   gem.files       = Dir["lib/**/*"]
   gem.test_files  = Dir["test/**/*_test.rb"]
