@@ -1,3 +1,5 @@
+[![Build Status](https://secure.travis-ci.org/samuelkadolph/activerecord-retry.png?branch=master)](http://travis-ci.org/samuelkadolph/activerecord-retry)
+
 # activerecord-retry
 
 activerecord-retry adds query retrying to `ActiveRecord` for reads and transactions on specific errors.
