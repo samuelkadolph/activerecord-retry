@@ -1,10 +1,10 @@
 # activerecord-retry
 
-activerecord-retry add query retrying to `ActiveRecord` reads and transactions on specific errors.
+activerecord-retry adds query retrying to `ActiveRecord` for reads and transactions on specific errors.
 
 ## Description
 
-Retries reads and transactions when an `ActiveRecord::StatementInvalid` occurs that matches a list of errors. Default list
+Retries reads and transactions when an `ActiveRecord::StatementInvalid` error occurs that matches a list of errors. Default list
 of errors includes errors related to failover situations to allow for graceful failovers during a request and to attempt
 prevention of data loss for temporary issue.
 
