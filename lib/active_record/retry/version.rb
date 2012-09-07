@@ -1,5 +1,5 @@
-require "active_record"
-
-module ActiveRecord::Retry
-  VERSION = "1.0.0"
+module ActiveRecord
+  module Retry
+    VERSION = "1.0.0"
+  end
 end
