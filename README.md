@@ -17,19 +17,27 @@ prevention of data loss for temporary issue.
 
 If you're using rails, add this line your application's Gemfile:
 
-    gem "activerecord-retry", require: "active_record/retry/rails"
+```ruby
+gem "activerecord-retry", require: "active_record/retry/rails"
+```
 
 Otherwise add this line to your application's Gemfile:
 
-    gem "activerecord-retry"
+```ruby
+gem "activerecord-retry"
+```
 
 And then execute:
 
-    $ bundle install
+```
+$ bundle install
+```
 
 Or install it yourself as:
 
-    $ gem install activerecord-retry
+```
+$ gem install activerecord-retry
+```
 
 ## Usage
 
