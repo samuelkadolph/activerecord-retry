@@ -1,4 +1,7 @@
 [![Build Status](https://secure.travis-ci.org/samuelkadolph/activerecord-retry.png?branch=master)](http://travis-ci.org/samuelkadolph/activerecord-retry)
+[![Gem Version](https://badge.fury.io/rb/activerecord-retry.png)](http://badge.fury.io/rb/activerecord-retry)
+[![Dependency Status](https://gemnasium.com/samuelkadolph/activerecord-retry.png)](https://gemnasium.com/samuelkadolph/activerecord-retry)
+[![Code Climate](https://codeclimate.com/github/samuelkadolph/activerecord-retry.png)](https://codeclimate.com/github/samuelkadolph/activerecord-retry)
 
 # activerecord-retry
 
