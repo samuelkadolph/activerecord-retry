@@ -89,10 +89,10 @@ describe ActiveRecord::Retry do
 
     warning = @buffer.string
     warning.wont_be_empty
-    /sleeping for 2s/i.must_match(warning)
-    /reconnecting/i.must_match(warning)
-    /retrying/i.must_match(warning)
-    /for the 1st time/i.must_match(warning)
+    warning.must_match(/sleeping for 2s/i)
+    warning.must_match(/reconnecting/i)
+    warning.must_match(/retrying/i)
+    warning.must_match(/for the 1st time/i)
   end
 
   it "sleeps for the proper times" do
